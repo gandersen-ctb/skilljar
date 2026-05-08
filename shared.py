@@ -1,9 +1,12 @@
 from anthropic import Anthropic
+from dotenv import load_dotenv
+load_dotenv()
+client = Anthropic()
+
 import json
 
 max_tokens = 1000
 model = "claude-sonnet-4-6"
-client = Anthropic()
 
 def add_role_message(messages, role, text):
     message = {"role": role, "content": text}
@@ -39,7 +42,7 @@ def run_prompt(test_case):
     """
     messages = []
     add_role_message(messages, 'user', prompt)
-    output = chat(client, messages)
+    output = chat(messages)
     return output
 
 def run_test_case(test_case):

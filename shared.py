@@ -1,27 +1,52 @@
 from anthropic import Anthropic
+import json
 
-model = "claude-sonnet-4-6";
-max_tokens = 1000;
-client = Anthropic(
-    # This is the default and can be omitted
-    # api_key=os.environ.get("ANTHROPIC_API_KEY"),
-)
+max_tokens = 1000
+model = "claude-sonnet-4-6"
+client = Anthropic()
 
 def add_role_message(messages, role, text):
-  message = {"role": role, "content": text}
-  messages.append(message)
+    message = {"role": role, "content": text}
+    messages.append(message)
 
-def chat(client, messages, system=None, temperature=1.0, stop_sequences=[]):
-  params = {
-    "model": model,
-    "max_tokens": max_tokens,
-    "messages": messages,
-    "temperature": temperature,
-    "stop_sequences": stop_sequences
-  }
+def chat(client, messages, model="claude-sonnet-4-6",
+         system=None, temperature=1.0, stop_sequences=None):
 
-  if system:
-    params["system"] = system
+    if stop_sequences is None:
+        stop_sequences = []
 
-  message = client.messages.create(**params)
-  return messages.content[0].text
+    params = {
+        "model": model,
+        "max_tokens": max_tokens,
+        "messages": messages,
+        "temperature": temperature,
+        "stop_sequences": stop_sequences
+    }
+
+    if system:
+        params["system"] = system
+
+    message = client.messages.create(**params)
+
+    return message.content[0].text
+
+
+def generate_dataset():
+    prompt = """
+    Generate a evaluation dataset for a prompt evaluation.
+    Please generate 3 objects.
+    """
+
+    messages = []
+
+    add_role_message(messages, 'user', prompt)
+    add_role_message(messages, 'assistant', "```json")
+
+    text = chat(
+        client,
+        messages,
+        model,
+        stop_sequences=["```"]
+    )
+
+    return json.loads(text)

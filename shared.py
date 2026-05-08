@@ -9,7 +9,7 @@ def add_role_message(messages, role, text):
     message = {"role": role, "content": text}
     messages.append(message)
 
-def chat(client, messages, model="claude-sonnet-4-6",
+def chat(messages, model="claude-sonnet-4-6",
          system=None, temperature=1.0, stop_sequences=None):
 
     if stop_sequences is None:
@@ -30,23 +30,37 @@ def chat(client, messages, model="claude-sonnet-4-6",
 
     return message.content[0].text
 
+def run_prompt(test_case):
+    """Merges the prompt and test case input, then returns the result"""
+    prompt = f"""
+    Please solve the following task:
 
-def generate_dataset():
-    prompt = """
-    Generate a evaluation dataset for a prompt evaluation.
-    Please generate 3 objects.
+    {test_case["task"]}
     """
-
     messages = []
-
     add_role_message(messages, 'user', prompt)
-    add_role_message(messages, 'assistant', "```json")
+    output = chat(client, messages)
+    return output
 
-    text = chat(
-        client,
-        messages,
-        model,
-        stop_sequences=["```"]
-    )
+def run_test_case(test_case):
+    """Calls run_prompt, then grades the result"""
+    output = run_prompt(test_case)
+    
+    # TODO - Grading
+    score = 10
+    
+    return {
+        "output": output,
+        "test_case": test_case,
+        "score": score
+    }
 
-    return json.loads(text)
+def run_eval(dataset):
+    """Loads the dataset and calls run_test_case with each case"""
+    results = []
+    
+    for test_case in dataset:
+        result = run_test_case(test_case)
+        results.append(result)
+    
+    return results

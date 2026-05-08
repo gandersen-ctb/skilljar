@@ -1,3 +1,4 @@
+# FIRST OFF LOAD ENV AND GENERATE CLIENT.
 from anthropic import Anthropic
 from dotenv import load_dotenv
 from statistics import mean
@@ -5,7 +6,10 @@ from statistics import mean
 load_dotenv()
 client = Anthropic()
 
-import json
+# NOW IMPORTS
+import json # JSON Parser.
+import ast # For Python compile assert.
+import re # Handles REG-EX
 
 max_tokens = 1000
 model = "claude-sonnet-4-6"
@@ -41,10 +45,16 @@ def run_prompt(test_case):
     Please solve the following task:
 
     {test_case["task"]}
+
+    * Respond only with Python, JSON or a plain Regex
+    * Do not add comments, comentary or explanation
     """
     messages = []
     add_role_message(messages, 'user', prompt)
-    output = chat(messages)
+    add_role_message(messages, 'assistant', "```code")
+    model = "claude-haiku-4-5"
+
+    output = chat(messages, model, stop_sequences=["```"])
     return output
 
 def grade_by_model(test_case, output):
@@ -85,15 +95,53 @@ def grade_by_model(test_case, output):
     eval_text = chat(messages, model, stop_sequences=["```"])
     return json.loads(eval_text)
 
+def validate_json(data):
+    try:
+        json.loads(data.strip())
+        return 10
+    except json.JSONDecodeError:
+        return 0
+
+def validate_python(data):
+    try:
+        ast.parse(data.strip())
+        return 10
+    except SyntaxError:
+        return 0
+
+def validate_regex(data):
+    try:
+        re.compile(data.strip())
+        return 10
+    except re.Error:
+        return 0
+
+def grade_by_code(data, test_case):
+    format = test_case["format"]
+    if format == "json":
+        return validate_json(data)
+    elif format == "python":
+        return validate_python(data)
+    else:
+        return validate_regex(data)
+
 def run_test_case(test_case):
     """Calls run_prompt, then grades the result"""
     output = run_prompt(test_case)
     
-    # TODO - Grading
-    # score = 10
-    grade = grade_by_model(test_case, output)
-    score = grade['score']
-    reasoning = grade['reasoning']
+    # Grading the output by model.
+    model_grade = grade_by_model(test_case, output)
+    model_score = model_grade['score']
+    reasoning = model_grade['reasoning']
+
+    # Grading the output format and syntax by code.
+    # This DOES NOT RETURN a struct, only score.
+    code_score = grade_by_code(output, test_case)
+
+    print(f"Model eval score: {model_score}")
+    print(f"Code eval score: {code_score}")
+
+    score = mean([model_score, code_score])
 
     return {
         "output": output,
